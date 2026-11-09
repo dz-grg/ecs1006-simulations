@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RL inductor current rise and decay</title>
+<style>
+:root{color-scheme:light;--navy:#002d72;--red:#b51f2e;--ink:#172033;--muted:#5b6472;--line:#d5dce6;--pale:#eff3f8}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);background:#fff;font:16px/1.5 system-ui,sans-serif}
+main{max-width:1180px;margin:auto;padding:clamp(16px,3vw,38px)}header p{margin:0;color:var(--muted)}h1,h2{color:var(--navy)}h1{font-size:clamp(1.5rem,3vw,2.3rem);line-height:1.2;margin:6px 0 20px}h2{font-size:1.02rem}
+dl{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-block:1px solid var(--line);padding:10px 0}dt{font-size:.82rem;color:var(--muted)}dd{margin:0;font-weight:650;font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:clamp(20px,4vw,48px)}section{min-width:0}svg,canvas{display:block;width:100%}canvas{height:250px}
+.wire{fill:none;stroke:var(--ink);stroke-width:2.6;stroke-linejoin:round}svg text{fill:var(--ink);font-size:18px}
+#flow{fill:none;stroke:var(--red);stroke-width:8;stroke-linecap:round;stroke-dasharray:.1 15}
+.note{background:var(--pale);padding:12px 14px}.row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+button{font:inherit;color:var(--navy);background:#fff;border:1px solid var(--navy);border-radius:2px;padding:7px 11px;cursor:pointer}
+button[aria-pressed=true]{background:var(--navy);color:white}:focus-visible{outline:2px solid var(--navy);outline-offset:4px}
+.control{display:grid;grid-template-columns:94px minmax(0,1fr) 85px;gap:8px;align-items:center;min-height:40px}
+input{width:100%;accent-color:var(--navy)}output{text-align:right;font-variant-numeric:tabular-nums}
+.legend{font-size:.85rem;color:var(--muted)}.legend b{color:var(--navy)}
+@media(max-width:760px){.grid{grid-template-columns:1fr}dl{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<main>
+<header><p>ECS1006 · Circuit transients</p><h1>RL inductor current rise and decay</h1></header>
+<dl>
+<div><dt>Source setting</dt><dd id="source"></dd></div>
+<div><dt>Time constant τ</dt><dd id="tau"></dd></div>
+<div><dt>Inductor current</dt><dd id="state"></dd></div>
+<div><dt>Inductor voltage</dt><dd id="other"></dd></div>
+</dl>
+<div class="grid">
+<section>
+<h2>Series RL circuit</h2>
+<svg viewBox="0 0 530 285" role="img" aria-label="Programmable voltage source, resistor, and inductor connected in series">
+<path class="wire" d="M90 112V62H188l10 -10 13 20 13 -20 13 20 13 -20 13 20 10 -10H420V119 M420 156V216H90V162"/>
+<circle class="wire" cx="90" cy="137" r="25"/>
+<text x="84" y="132">+</text><text x="84" y="152">−</text><text x="22" y="143" id="svgSource">0 V</text>
+<text x="221" y="36">R</text>
+<path class="wire" d="M420 119c19 0 19 10 0 10c19 0 19 9 0 9c19 0 19 9 0 9c19 0 19 9 0 9"/>
+<text x="453" y="144">L</text>
+<path id="flow" d="M90 112V62H188l10 -10 13 20 13 -20 13 20 13 -20 13 20 10 -10H420V119 M420 156V216H90V162"/>
+<text id="direction" x="255" y="252" text-anchor="middle"></text>
+</svg>
+<p class="note">Inductor current cannot jump. Set the source high to build current, then set it to 0 V to let the current decay through the resistor. The current keeps its direction while the inductor voltage reverses. Choose <strong>Sinusoidal</strong> under <strong>Source waveform</strong> to try an AC input and adjust its frequency.</p>
+<p class="legend" id="timing">The 0 V source setting keeps the loop closed. Playback is scaled to τ, with one τ per second at 1×.</p>
+</section>
+<section>
+<h2 id="plotTitle">Step response</h2>
+<canvas id="plot" role="img" aria-label="Step response with a moving time cursor"></canvas>
+<p class="legend" id="plotKey"></p>
+<label>Source waveform <select id="mode"><option value="step">DC step</option><option value="sine">Sinusoidal</option></select></label>
+<label class="control" id="freqControl" style="display:none">Frequency <input id="freq" type="range" min="1" max="500" value="50"><output id="fo"></output></label>
+<div class="row">
+<button id="high" aria-pressed="false">Build current</button>
+<button id="low" aria-pressed="true">Let current decay (0 V)</button>
+<button id="play">Pause</button><button id="reset">Reset</button>
+</div>
+<label class="control">Resistance <input id="r" type="range" min="10" max="1000" value="100"><output id="ro"></output></label>
+<label class="control">Inductance <input id="part" type="range" min="1" max="1000" value="500"><output id="po"></output></label>
+<label class="control">Source level <input id="v" type="range" min="1" max="24" value="10"><output id="vo"></output></label>
+<label class="control">Speed <input id="speed" type="range" min=".2" max="2" step=".1" value="1"><output id="so"></output></label>
+</section>
+</div>
+</main>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const rc = false;
+const canvas = $('plot');
+const ctx = canvas.getContext('2d');
+let high = false, elapsed = 0, initial = 0, offset = 0, last = null;
+let paused = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function settings() {
+  const r = +$('r').value, part = +$('part').value, v = +$('v').value;
+  const tau = rc ? r * part * 1e-6 : part * 1e-3 / r;
+  return {r, part, v, tau, max: rc ? v : v/r};
+}
+let p = settings();
+function target() { return high ? p.max : 0; }
+function sineMode() { return $('mode').value === 'sine'; }
+function frequency() { return +$('freq').value; }
+function phase(t) { return 2*Math.PI*frequency()*t; }
+function response(t) {
+  const decay = Math.exp(-t/p.tau);
+  if (!sineMode()) return target() + (initial-target())*decay;
+  const q = phase(p.tau);
+  const gain = p.max/(1+q*q);
+  return gain*(Math.sin(phase(t))-q*Math.cos(phase(t))) + (initial+gain*q)*decay;
+}
+function setSource(next) {
+  if (high === next) return;
+  initial = response(elapsed);
+  high = next;
+  elapsed = 0;
+  render();
+}
+function plot() {
+  const w = canvas.clientWidth, h = canvas.clientHeight, d = devicePixelRatio || 1;
+  if (!w || !h) return;
+  if (canvas.width !== Math.round(w*d) || canvas.height !== Math.round(h*d)) {
+    canvas.width = Math.round(w*d); canvas.height = Math.round(h*d);
+  }
+  ctx.setTransform(d,0,0,d,0,0);
+  ctx.clearRect(0,0,w,h);
+  const left = 52, top = 20, bottom = h-40, width = w-left-16;
+  const ac = sineMode();
+  const duration = ac ? 2/frequency() : 5*p.tau;
+  const start = ac ? Math.floor(elapsed/duration)*duration : 0;
+  const scale = Math.max(Math.abs(initial),p.max) * 1.1;
+  const x = n => left + width*n/5;
+  const y = val => ac ? (top+bottom)/2-(bottom-top)*val/(2*scale) : bottom-(bottom-top)*val/scale;
+  ctx.font = '13px system-ui';
+  ctx.strokeStyle = '#d5dce6'; ctx.fillStyle = '#5b6472';
+  for (let n=0;n<=5;n++) {
+    ctx.beginPath(); ctx.moveTo(x(n),top); ctx.lineTo(x(n),bottom); ctx.stroke();
+    ctx.fillText(n ? (ac ? (1000*duration*n/5).toPrecision(2) : n+'τ') : '0',x(n)-5,bottom+19);
+  }
+  ctx.fillText('iL (mA)',4,14);
+  ctx.fillText((scale*(rc?1:1000)).toPrecision(3),3,top+12);
+  ctx.fillText('0',32,y(0)+4);
+  ctx.setLineDash([5,4]); ctx.strokeStyle='#5b6472';
+  ctx.beginPath();
+  for(let n=0;n<=160;n++){
+    const a=n/160, yy=y(ac?p.max*Math.sin(phase(a*duration)):target());
+    n?ctx.lineTo(x(5*a),yy):ctx.moveTo(left,yy);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);ctx.strokeStyle='#002d72';ctx.lineWidth=2.5;
+  ctx.beginPath();
+  for(let n=0;n<=160;n++){const a=n/160; const yy=y(response(start+a*duration)); n?ctx.lineTo(x(5*a),yy):ctx.moveTo(left,yy);}
+  ctx.stroke();
+  const t=ac ? elapsed%duration : Math.min(elapsed,duration);
+  ctx.fillStyle='#b51f2e';ctx.beginPath();ctx.arc(x(5*t/duration),y(response(elapsed)),5,0,2*Math.PI);ctx.fill();
+  ctx.lineWidth=1;
+}
+function render() {
+  const ac = sineMode();
+  const value = response(elapsed), source = ac ? p.v*Math.sin(phase(elapsed)) : high ? p.v : 0;
+  const current = rc ? (source-value)/p.r : value;
+  const other = rc ? current*1000 : source-p.r*value;
+  $('source').textContent=source.toFixed(2)+' V';
+  $('svgSource').textContent=source.toFixed(1)+' V';
+  $('plotTitle').textContent=ac?'Sinusoidal response · time (ms)':'Step response';
+  $('timing').textContent=ac?'Source level sets the peak voltage. The plot shows two periods at a time. At 1×, each period takes one second on screen.':'The 0 V source setting keeps the loop closed. At 1×, one τ takes one second on screen.';
+  $('plotKey').textContent=ac?'Solid: inductor current · Dashed: source voltage divided by R':'Solid: inductor current · Dashed: final value · Grid: one τ per division';
+  $('freqControl').style.display=ac?'grid':'none';
+  $('fo').value=frequency()+' Hz';
+  $('high').hidden=$('low').hidden=ac;
+  $('tau').textContent=(p.tau*1000).toPrecision(3)+' ms';
+  $('state').textContent=(value*(rc?1:1000)).toFixed(2)+' mA';
+  $('other').textContent=other.toFixed(2)+(rc?' mA':' V');
+  $('ro').value=p.r+' Ω'; $('po').value=p.part+(rc?' µF':' mH');
+  $('vo').value=p.v+' V'; $('so').value=(+$('speed').value).toFixed(1)+'×';
+  $('flow').style.opacity=Math.abs(current)<1e-7?0:Math.min(1,.25+.75*Math.abs(current)*p.r/p.v);
+  $('flow').style.strokeDashoffset=offset;
+  $('flow').style.stroke=current<0?'var(--navy)':'var(--red)';
+  $('direction').textContent=Math.abs(current)<1e-7?'Current ≈ 0':current>0?'Clockwise current ↻':'Anticlockwise current ↺';
+  $('high').setAttribute('aria-pressed',high); $('low').setAttribute('aria-pressed',!high);
+  $('play').textContent=paused?'Play':'Pause';
+  plot();
+}
+function frame(now) {
+  const dt = last===null ? 0 : Math.min((now-last)/1000,.05);
+  last=now;
+  if (!paused) {
+    const speed=+$('speed').value;
+    elapsed+=dt*(sineMode()?1/frequency():p.tau)*speed;
+    const source=sineMode()?p.v*Math.sin(phase(elapsed)):high?p.v:0;
+    const current = rc ? (source-response(elapsed))/p.r : response(elapsed);
+    offset-=Math.sign(current)*dt*65*speed;
+    render();
+  }
+  requestAnimationFrame(frame);
+}
+$('high').onclick=()=>setSource(true); $('low').onclick=()=>setSource(false);
+$('play').onclick=()=>{paused=!paused;render();};
+$('reset').onclick=()=>{high=false;initial=elapsed=offset=0;render();};
+for(const id of ['r','part','v']) $(id).oninput=()=>{
+  initial=response(elapsed);elapsed=0;p=settings();render();
+};
+$('speed').oninput=render;
+for(const id of ['mode','freq']) $(id).onchange=()=>{high=false;initial=elapsed=offset=0;render();};
+new ResizeObserver(render).observe(canvas);
+render();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
