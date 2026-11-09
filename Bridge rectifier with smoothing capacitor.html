@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bridge rectifier with smoothing capacitor</title>
+<style>
+:root{--bg:#fff;--ink:#1b2433;--ink2:#5b6676;--surface:#f1f3f6;--line:#d3d9e2;--coral:#D85A30;--blue:#378ADD;--teal:#1D9E75;
+--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+--serif:"Latin Modern Math","STIX Two Math","Cambria Math","Times New Roman",serif;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--ink:#e6e9ef;--ink2:#9aa5b4;--surface:#1b212b;--line:#2c3441}}
+:root[data-theme="dark"]{--bg:#12161d;--ink:#e6e9ef;--ink2:#9aa5b4;--surface:#1b212b;--line:#2c3441}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--sans)}
+.wrap{max-width:1180px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-right)) 28px max(16px,env(safe-area-inset-left))}
+h1{font-size:22px;line-height:1.25;font-weight:600;margin:4px 0}
+.lead{color:var(--ink2);font-size:14px;margin:0 0 14px;max-width:60ch}
+.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:14px}
+.cards div{background:var(--surface);border-radius:8px;padding:8px 12px}
+.cards small{display:block;font-size:12px;color:var(--ink2)}
+.cards b{font:500 15px var(--mono)}
+.grid{display:grid;gap:18px}
+@media (min-width:1000px){.grid{grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:start}}
+svg{display:block;width:100%;height:auto}
+.ink{fill:none;stroke:var(--ink);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.ml{font-family:var(--serif);font-style:italic;font-size:20px;fill:var(--ink)}
+.sb{font-size:14px}.up{font-style:normal}
+.pol{font:500 17px var(--sans)}.cp{font-size:14px;fill:var(--ink)}.vcl{font:12px var(--mono);fill:var(--ink2)}
+.flow{fill:none;stroke-width:4.5;stroke-linecap:round;stroke-dasharray:.1 12;opacity:0}
+.dot{fill:var(--ink)}
+@media (max-width:560px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.ml{font-size:25px}.sb{font-size:18px}.pol{font-size:22px}.cp{font-size:18px}.vcl{font-size:15px}.ink{stroke-width:3}.flow{stroke-width:5.5}}
+#cap{font-size:14px;color:var(--ink2);margin:8px 0 0;min-height:4.5em}
+canvas{display:block;width:100%;color:var(--ink)}
+.lg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--ink2);margin:6px 0 12px}
+.lg i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+#st{font-family:var(--mono)}
+.sl{display:grid;grid-template-columns:44px minmax(0,1fr) 70px;align-items:center;gap:10px;font-size:14px;color:var(--ink2);min-height:40px}
+.sl output{text-align:right;font-family:var(--mono);color:var(--ink)}
+input[type=range]{width:100%;height:32px;margin:0;accent-color:var(--teal);touch-action:manipulation}
+.row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:6px}
+.chk{display:flex;align-items:center;gap:10px;min-height:44px;font-size:15px;cursor:pointer}
+.chk input{width:22px;height:22px;accent-color:var(--teal)}
+button{font:inherit;font-size:15px;min-height:44px;padding:0 20px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;cursor:pointer;touch-action:manipulation}
+</style>
+<style>
+/* Lecture 9 Beamer palette and slide hierarchy. */
+:root {
+  --bg: #fff;
+  --ink: #172033;
+  --ink2: #5B6472;
+  --surface: #EFF3F8;
+  --line: #D5DCE6;
+  --qub: #002D72;
+  --coral: #B51F2E;
+  --blue: #002D72;
+  --teal: #16825D;
+  color-scheme: light;
+}
+.wrap { padding-block: clamp(18px, 3vw, 40px); }
+h1 {
+  color: var(--qub);
+  font-size: clamp(1.55rem, 3vw, 2.35rem);
+  font-weight: 700;
+  margin: 4px 0 18px;
+}
+.course { margin: 0; color: var(--ink2); font-size: .88rem; }
+.cards { gap: 0; margin-bottom: 24px; border-block: 1px solid var(--line); }
+.cards div { background: transparent; border-radius: 0; padding: 9px 12px 10px 0; }
+.cards small { font-size: .83rem; }
+.cards b { font: 650 1.05rem var(--sans); font-variant-numeric: tabular-nums; }
+.grid { gap: clamp(24px, 4vw, 52px); }
+.grid > section { min-width: 0; }
+h2 { color: var(--qub); font-size: 1.02rem; margin: 0 0 8px; }
+#cap { color: var(--ink); background: var(--surface); padding: 12px 14px; min-height: 5.5em; }
+.lg { font-size: .83rem; }
+.lg i { border-radius: 0; }
+#st { flex-basis: 100%; margin: 4px 0 0 !important; font: 600 .85rem var(--sans); }
+.sl { grid-template-columns: 54px minmax(0,1fr) 76px; }
+.sl output { font: 600 .9rem var(--sans); font-variant-numeric: tabular-nums; }
+.vcl { font-family: var(--sans); font-weight: 600; font-variant-numeric: tabular-nums; fill: var(--ink); }
+.controls-title { border-top: 1px solid var(--line); padding-top: 12px; }
+input[type=range], .chk input { accent-color: var(--qub); }
+button { background: var(--qub); border-color: var(--qub); color: white; border-radius: 2px; }
+:focus-visible { outline: 2px solid var(--qub); outline-offset: 4px; }
+.flow { stroke-width: 8; }
+#fp { stroke: var(--coral); }
+#fn { stroke: var(--blue); }
+#fd { stroke: var(--teal); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<p class="course">ECS1006 · Lecture 9 · AC sinusoidal signals</p>
+<h1>Bridge rectifier with smoothing capacitor</h1>
+
+<div class="cards">
+  <div><small>Operating mode</small><b id="m1">-</b></div>
+  <div><small>Diodes conducting</small><b id="m2">-</b></div>
+  <div><small>Output v<sub>o</sub></small><b id="m3">-</b></div>
+  <div><small>Ripple (p-p)</small><b id="m4" style="color:var(--coral)">-</b></div>
+</div>
+
+<div class="grid">
+<section>
+<h2>Circuit and current path</h2>
+<svg viewBox="0 0 690 415" role="img" aria-label="Full-wave bridge rectifier circuit with load resistor and smoothing capacitor">
+  <path class="ink" d="M62 231V190H130L185.5 134.5"/>
+  <path class="ink" d="M209.5 110.5L265 55H600V148"/>
+  <path class="ink" d="M265 55L320.5 110.5"/>
+  <path class="ink" d="M344.5 134.5L400 190V395H62V279"/>
+  <path class="ink" d="M130 190L185.5 245.5"/>
+  <path class="ink" d="M209.5 269.5L265 325H600V232"/>
+  <path class="ink" d="M265 325L320.5 269.5"/>
+  <path class="ink" d="M344.5 245.5L400 190"/>
+  <path class="ink" d="M600 148L612 160L588 175L612 190L588 205L612 220L600 232"/>
+
+  <path id="fp" class="flow" stroke="#D85A30" d="M62 231V190H130L265 55H600V148L612 160L588 175L612 190L588 205L612 220L600 232V325H265L400 190V395H62V279"/>
+  <path id="fn" class="flow" stroke="#378ADD" d="M62 279V395H400V190L265 55H600V148L612 160L588 175L612 190L588 205L612 220L600 232V325H265L130 190H62V231"/>
+  <path id="fd" class="flow" stroke="#1D9E75" d="M490 180V55H600V148L612 160L588 175L612 190L588 205L612 220L600 232V325H490V203"/>
+  <path id="fc" class="flow" stroke="#D85A30" d="M490 55V180M490 203V325"/>
+
+  <circle class="ink" cx="62" cy="255" r="24"/>
+  <path class="ink" d="M48 255q7 -14 14 0t14 0"/>
+  <text class="ml" x="32" y="262" text-anchor="end">v<tspan class="sb" dy="5">s</tspan></text>
+  <text id="pp" class="pol" x="74" y="224" fill="#D85A30">+</text>
+  <text id="pn" class="pol" x="74" y="296" fill="#378ADD">−</text>
+
+  <g id="d1" transform="translate(197.5,122.5) rotate(-45)"><path class="ink" d="M-17 0H-10M10 0H17M10 -11V11"/><polygon class="ink" points="-10,-10 -10,10 10,0"/></g>
+  <g id="d2" transform="translate(332.5,122.5) rotate(-135)"><path class="ink" d="M-17 0H-10M10 0H17M10 -11V11"/><polygon class="ink" points="-10,-10 -10,10 10,0"/></g>
+  <g id="d3" transform="translate(197.5,257.5) rotate(-135)"><path class="ink" d="M-17 0H-10M10 0H17M10 -11V11"/><polygon class="ink" points="-10,-10 -10,10 10,0"/></g>
+  <g id="d4" transform="translate(332.5,257.5) rotate(-45)"><path class="ink" d="M-17 0H-10M10 0H17M10 -11V11"/><polygon class="ink" points="-10,-10 -10,10 10,0"/></g>
+
+  <text class="ml" transform="translate(176,101) rotate(-45)" text-anchor="middle">D<tspan class="sb up" dy="5">1</tspan></text>
+  <text class="ml" transform="translate(354,101) rotate(45)" text-anchor="middle">D<tspan class="sb up" dy="5">2</tspan></text>
+  <text class="ml" transform="translate(176,279) rotate(45)" text-anchor="middle">D<tspan class="sb up" dy="5">3</tspan></text>
+  <text class="ml" transform="translate(354,279) rotate(-45)" text-anchor="middle">D<tspan class="sb up" dy="5">4</tspan></text>
+
+  <g id="capg">
+    <path class="ink" d="M490 55V180M490 203V325"/>
+    <path id="pl1" class="ink" d="M472 180H508"/>
+    <path id="pl2" class="ink" d="M472 198Q490 208 508 198"/>
+    <circle class="dot" cx="490" cy="55" r="3.5"/>
+    <circle class="dot" cx="490" cy="325" r="3.5"/>
+    <text class="ml" x="462" y="198" text-anchor="end">C</text>
+    <text class="cp" x="514" y="176">+</text>
+    <text id="vcl" class="vcl" x="490" y="238" text-anchor="middle">-</text>
+  </g>
+
+  <text class="ml" x="580" y="196" text-anchor="end">R<tspan class="sb" dy="5">L</tspan></text>
+  <text class="ml up" x="618" y="52">+</text>
+  <text class="ml up" x="618" y="338">−</text>
+  <text class="ml" x="646" y="196">v<tspan class="sb" dy="5">o</tspan></text>
+</svg>
+<p id="cap" aria-live="off"></p>
+</section>
+
+<section>
+<h2>Input and output waveforms</h2>
+<canvas id="cv" role="img" aria-label="Waveform plot of source voltage and output voltage over two periods"></canvas>
+<div class="lg">
+  <span><i style="background:var(--coral);opacity:.5"></i>Charging, v<sub>s</sub> &gt; 0</span>
+  <span><i style="background:var(--blue);opacity:.5"></i>Charging, v<sub>s</sub> &lt; 0</span>
+  <span><i style="background:var(--teal);opacity:.5"></i>Discharging</span>
+  <span id="st" style="margin-left:auto">-</span>
+</div>
+<h2 class="controls-title">Simulation controls</h2>
+<div class="sl"><label for="ic">C</label><input type="range" id="ic" min="1" max="1000" step="1" value="1000"><output id="lc"></output></div>
+<div class="sl"><label for="ir">R<sub>L</sub></label><input type="range" id="ir" min="20" max="2000" step="10" value="200"><output id="lr"></output></div>
+<div class="sl"><label for="iv">V<sub>p</sub></label><input type="range" id="iv" min="5" max="50" step="1" value="12"><output id="lv"></output></div>
+<div class="sl"><label for="isp">Speed</label><input type="range" id="isp" min="0.2" max="2" step="0.1" value="1"><output id="ls"></output></div>
+<div class="row">
+  <label class="chk"><input type="checkbox" id="icap">Smoothing capacitor</label>
+  <button id="pb" type="button">Pause</button>
+</div>
+</section>
+</div>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const cvs=$('cv'),ctx=cvs.getContext('2d');
+const VD=0.7,FREQ=50,SERIF='"Latin Modern Math","STIX Two Math","Times New Roman",serif',SANS='system-ui,sans-serif';
+const palette=getComputedStyle(document.documentElement);
+const COL={p:palette.getPropertyValue('--coral').trim(),n:palette.getPropertyValue('--blue').trim(),d:palette.getPropertyValue('--teal').trim()};
+let W=680,H=230,ph=0,last=null,paused=matchMedia('(prefers-reduced-motion: reduce)').matches,off=0,sim=null,key='';
+function size(){
+  W=Math.max(280,Math.round(cvs.parentElement.clientWidth));
+  H=Math.round(Math.min(280,Math.max(190,W*0.36)));
+  const d=Math.min(window.devicePixelRatio||1,3);
+  cvs.width=Math.round(W*d);cvs.height=Math.round(H*d);cvs.style.height=H+'px';
+  ctx.setTransform(d,0,0,d,0,0);
+}
+function P(){return{C:+$('ic').value*1e-6,R:+$('ir').value,Vp:+$('iv').value,f:FREQ,cap:$('icap').checked};}
+function lbl(){const p=P();$('lc').textContent=Math.round(p.C*1e6)+' µF';$('lr').textContent=Math.round(p.R)+' Ω';$('lv').textContent=Math.round(p.Vp)+' V';$('ls').textContent=(+$('isp').value).toFixed(1)+'×';}
+function run(p){
+  const {C,R,Vp,f,cap}=p,T=1/f;
+  const vin=t=>Math.max(Vp*Math.abs(Math.sin(2*Math.PI*f*t))-2*VD,0);
+  let Vc=0;
+  if(cap){const N=4000,dt=20*T/N;for(let i=0;i<N;i++){const v=vin(i*dt);Vc=(v>0&&v>=Vc)?v:Vc*Math.exp(-dt/(R*C));}}
+  const PTS=800,dt=2*T/PTS,vo=[],vr=[],vs=[],cd=[];
+  for(let i=0;i<=PTS;i++){
+    const t=i*dt,v=vin(t),s=Vp*Math.sin(2*Math.PI*f*t);let on;
+    if(cap){if(v>0&&v>=Vc){Vc=v;on=true;}else{Vc*=Math.exp(-dt/(R*C));on=false;}vo.push(Vc);}
+    else{on=v>0;vo.push(v);}
+    vr.push(v);vs.push(s);cd.push(on);
+  }
+  const n=vo.length,Vdc=vo.reduce((a,b)=>a+b,0)/n;
+  const Vr=Math.max(...vo)-Math.min(...vo);
+  const rms=Math.sqrt(vo.reduce((a,b)=>a+(b-Vdc)*(b-Vdc),0)/n);
+  return{vo,vr,vs,cd,PTS,Vdc,Vr,rf:Vdc>0.001?rms/Vdc*100:0,tau:R*C,cap,Vp,Vpk:Math.max(Vp-2*VD,0)};
+}
+function setD(id,on,c){$(id).querySelector('polygon').style.fill=on?c:'none';}
+let FS=17;
+function mt(b,s,x,y,al){
+  ctx.font='italic '+FS+'px '+SERIF;const w1=ctx.measureText(b).width;
+  ctx.font='italic '+Math.round(FS*0.72)+'px '+SERIF;const w2=ctx.measureText(s).width;
+  const x0=al==='r'?x-w1-w2:x;
+  ctx.font='italic '+FS+'px '+SERIF;ctx.fillText(b,x0,y);
+  ctx.font='italic '+Math.round(FS*0.72)+'px '+SERIF;ctx.fillText(s,x0+w1,y+4);
+}
+function arrow(x,y,a,ink){ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-8,-3.5);ctx.lineTo(-8,3.5);ctx.closePath();ctx.fillStyle=ink;ctx.fill();ctx.restore();}
+function draw(idx){
+  const sm=W<480;FS=sm?15:17;
+  const ML=sm?48:60,MR=sm?20:26,MT=16,MB=34,DW=W-ML-MR,DH=H-MT-MB,CY=MT+DH/2,A=DH/2-4;
+  const {vo,vr,vs,cd,PTS,Vp,Vpk,Vdc,cap}=sim;
+  const ink=getComputedStyle(cvs).color;
+  ctx.clearRect(0,0,W,H);ctx.textAlign='left';
+  const X=i=>ML+i/PTS*DW,Y=v=>CY-v/Vp*A;
+  const bw=DW/PTS+0.6;
+  for(let i=0;i<PTS;i++){
+    let c=null;if(cd[i])c=vs[i]>=0?COL.p:COL.n;else if(cap)c=COL.d;
+    if(c){ctx.globalAlpha=0.12;ctx.fillStyle=c;ctx.fillRect(X(i),MT,bw,DH);}
+  }
+  ctx.globalAlpha=0.25;ctx.strokeStyle=ink;ctx.lineWidth=1;ctx.setLineDash([2,4]);
+  [0.25,0.5,0.75,1].forEach(q=>{const x=X(q*PTS);ctx.beginPath();ctx.moveTo(x,MT);ctx.lineTo(x,H-MB);ctx.stroke();});
+  ctx.setLineDash([]);ctx.globalAlpha=1;
+  ctx.fillStyle=ink;ctx.textAlign='center';ctx.font='italic '+(FS-1)+'px '+SERIF;
+  [['T/2',0.25],['T',0.5],['3T/2',0.75],['2T',1]].forEach(([l,q])=>ctx.fillText(l,X(q*PTS),H-MB+18));
+  ctx.textAlign='left';
+  ctx.strokeStyle=ink;ctx.lineWidth=1.6;
+  ctx.beginPath();ctx.moveTo(ML,H-MB);ctx.lineTo(ML,MT+4);ctx.stroke();arrow(ML,MT,-Math.PI/2,ink);
+  ctx.beginPath();ctx.moveTo(ML-4,CY);ctx.lineTo(W-MR+2,CY);ctx.stroke();arrow(W-MR+8,CY,0,ink);
+  ctx.fillStyle=ink;mt('V','p',ML-8,Y(Vp)+5,'r');mt('−V','p',ML-8,Y(-Vp)+5,'r');mt('v','',ML+8,MT+8,'l');
+  ctx.font='italic '+(FS-1)+'px '+SERIF;ctx.fillText('t',W-10,CY+18);
+  if(Vpk>0){
+    ctx.globalAlpha=0.5;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(ML,Y(Vpk));ctx.lineTo(W-MR,Y(Vpk));ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=0.85;
+    ctx.font='12px '+SANS;ctx.textAlign='right';ctx.fillText('Vp − 2VD',W-MR-2,Y(Vpk)-4);ctx.textAlign='left';ctx.globalAlpha=1;
+  }
+  ctx.globalAlpha=0.55;ctx.setLineDash([5,3]);ctx.lineWidth=1.3;ctx.beginPath();
+  for(let i=0;i<=PTS;i++)i?ctx.lineTo(X(i),Y(vs[i])):ctx.moveTo(X(i),Y(vs[i]));
+  ctx.stroke();
+  if(cap){ctx.globalAlpha=0.45;ctx.setLineDash([2,3]);ctx.beginPath();for(let i=0;i<=PTS;i++)i?ctx.lineTo(X(i),Y(vr[i])):ctx.moveTo(X(i),Y(vr[i]));ctx.stroke();}
+  ctx.setLineDash([]);ctx.globalAlpha=1;
+  ctx.strokeStyle=COL.p;ctx.lineWidth=1.2;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(ML,Y(Vdc));ctx.lineTo(W-MR,Y(Vdc));ctx.stroke();ctx.setLineDash([]);
+  ctx.strokeStyle=COL.d;ctx.lineWidth=2.4;ctx.beginPath();
+  for(let i=0;i<=PTS;i++)i?ctx.lineTo(X(i),Y(vo[i])):ctx.moveTo(X(i),Y(vo[i]));
+  ctx.stroke();
+  const cx=X(idx);
+  ctx.globalAlpha=0.4;ctx.strokeStyle=ink;ctx.lineWidth=1.3;ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(cx,MT);ctx.lineTo(cx,H-MB);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+  ctx.beginPath();ctx.arc(cx,Y(vo[idx]),5,0,6.2832);ctx.fillStyle=COL.d;ctx.fill();
+  ctx.beginPath();ctx.arc(cx,Y(vs[idx]),3.2,0,6.2832);ctx.fillStyle=ink;ctx.fill();
+}
+function render(){
+  const p=P(),k=JSON.stringify(p);
+  if(k!==key){key=k;sim=run(p);}
+  const ang=ph%(4*Math.PI);
+  const idx=Math.min(Math.floor(ang/(4*Math.PI)*sim.PTS),sim.PTS);
+  const ps=Math.sin(ang)>=0,on=sim.cd[idx],cap=p.cap;
+  const hc=ps?COL.p:COL.n;
+  $('fp').style.opacity=(on&&ps)?0.95:0;
+  $('fn').style.opacity=(on&&!ps)?0.95:0;
+  $('fd').style.opacity=(!on&&cap)?0.95:0;
+  $('fc').style.opacity=(on&&cap)?0.95:0;
+  $('fc').style.stroke=hc;
+  ['fp','fn','fd','fc'].forEach(id=>$(id).style.strokeDashoffset=off.toFixed(1));
+  setD('d1',on&&ps,COL.p);setD('d4',on&&ps,COL.p);setD('d2',on&&!ps,COL.n);setD('d3',on&&!ps,COL.n);
+  $('pp').textContent=ps?'+':'−';$('pn').textContent=ps?'−':'+';
+  $('pp').style.fill=hc;$('pn').style.fill=hc;
+  $('capg').style.display=cap?'':'none';
+  const pc=on?hc:COL.d;
+  $('pl1').style.stroke=pc;$('pl2').style.stroke=pc;
+  $('vcl').textContent='vC = '+sim.vo[idx].toFixed(1)+' V';
+  const m1=$('m1'),m2=$('m2');
+  if(on){m1.textContent='Charging';m1.style.color=hc;m2.textContent=ps?'D1, D4':'D2, D3';m2.style.color=hc;}
+  else if(cap){m1.textContent='Discharging';m1.style.color=COL.d;m2.textContent='none';m2.style.color=COL.d;}
+  else{m1.textContent='Blocking';m1.style.color='';m2.textContent='none';m2.style.color='';}
+  if(!cap&&on)m1.textContent=ps?'Positive half':'Negative half';
+  $('m3').textContent=sim.vo[idx].toFixed(2)+' V';
+  $('m4').textContent=sim.Vr.toFixed(2)+' V';
+  $('st').textContent='Vdc = '+sim.Vdc.toFixed(2)+' V · r = '+sim.rf.toFixed(1)+' % · τ = '+(sim.tau*1000).toFixed(1)+' ms';
+  let t;
+  const pair=ps?'D1 and D4':'D2 and D3';
+  if(on&&cap)t=(ps?'Positive':'Negative')+' half-cycle, charging: '+pair+' conduct, the source feeds RL and charges C up to |vs| − 2VD.';
+  else if(on)t=(ps?'Positive':'Negative')+' half-cycle: '+pair+' conduct and vo follows |vs| − 2VD. Current through RL keeps the same direction.';
+  else if(cap)t='Discharging: |vs| − 2VD is below vC, so all four diodes are reverse-biased and C alone supplies RL with time constant τ = RL·C.';
+  else t='Dead zone: |vs| is below 2VD, so all four diodes are off and vo = 0.';
+  $('cap').textContent=t;
+  draw(idx);
+}
+function frame(ts){
+  if(paused)return;
+  if(last===null)last=ts;
+  const dt=Math.min((ts-last)/1000,0.05);last=ts;
+  const spd=+$('isp').value;
+  ph+=dt*spd*Math.PI;off-=60*spd*dt;
+  render();
+  requestAnimationFrame(frame);
+}
+['ic','ir','iv','isp','icap'].forEach(id=>$(id).addEventListener('input',()=>{lbl();if(paused)render();}));
+$('pb').addEventListener('click',()=>{paused=!paused;$('pb').textContent=paused?'Play':'Pause';if(!paused){last=null;requestAnimationFrame(frame);}});
+if(window.ResizeObserver)new ResizeObserver(()=>{size();if(sim)render();}).observe(cvs.parentElement);
+else addEventListener('resize',()=>{size();if(sim)render();});
+size();lbl();
+$('pb').textContent=paused?'Play':'Pause';
+if(paused)render();else requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
