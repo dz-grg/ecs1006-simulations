@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rotating vectors and phasors</title>
+<style>
+:root{color-scheme:light;--navy:#002d72;--ink:#172033;--muted:#5b6472;--line:#d5dce6;--pale:#eff3f8}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);font:16px/1.5 system-ui,sans-serif}
+main{max-width:1180px;margin:auto;padding:clamp(16px,3vw,38px)}h1,h2{color:var(--navy)}h1{margin:4px 0 18px;line-height:1.15}h2{font-size:1rem;margin:0 0 8px}
+.course{margin:0;color:var(--muted)}.bar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;padding:12px 0;border-block:1px solid var(--line)}
+button,select,input{font:inherit}button,select{border:1px solid var(--navy);color:var(--navy);background:white;padding:5px 9px;border-radius:2px}button{cursor:pointer}input{accent-color:var(--navy);min-width:0}
+:focus-visible{outline:2px solid var(--navy);outline-offset:3px}
+[hidden]{display:none!important}
+.grid{display:grid;grid-template-columns:2fr 3fr;gap:24px;margin:20px 0}.grid section{min-width:0}
+canvas{width:100%;height:330px;display:block}.note{background:var(--pale);padding:12px 14px}.rows{display:grid;gap:8px}
+fieldset{border:1px solid var(--line);margin:0;display:flex;flex-wrap:wrap;gap:8px 20px}legend{font-weight:700}fieldset label{display:flex;align-items:center;gap:7px}output{min-width:4ch;font-variant-numeric:tabular-nums}
+@media(max-width:720px){.grid{grid-template-columns:1fr}canvas{height:280px}}
+</style>
+<main>
+<p class="course">ECS1006 · Lecture 10 · Phasors</p>
+<h1>Rotating vectors and phasors</h1>
+<div class="bar">
+<label>Vectors <select id="count"><option>1</option><option selected>2</option><option>3</option></select></label>
+<label>Frequency mode <select id="mode"><option value="shared">Same frequency</option><option value="independent">Independent frequencies</option></select></label>
+<label id="shared">Shared frequency <input id="common" type="number" min="0.1" max="5" step="0.1" value="0.5"> Hz</label>
+<button id="play">Pause</button><button id="reset">Reset time</button><output id="time">0.00 s</output>
+</div>
+<div class="grid">
+<section><h2>Complex plane</h2><canvas id="plane" role="img" aria-label="Rotating vectors on real and imaginary axes with horizontal projections"></canvas></section>
+<section><h2>Real projections over time</h2><canvas id="wave" role="img" aria-label="Cosine waveforms corresponding to the real projections of the rotating vectors"></canvas></section>
+</div>
+<div id="rows" class="rows"></div>
+<p class="note" id="lesson"></p>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const colours = ['#002d72','#b51f2e','#16825d'];
+const tau = 2*Math.PI;
+const inputs = colours.map((colour,i)=>{
+  const fields=document.createElement('fieldset');
+  fields.innerHTML='<legend>Vector '+(i+1)+'</legend>'+
+    '<label>Peak amplitude <input class="amp" type="range" min="0" max="5" step="0.1" value="'+(3-i*0.5)+'"><output></output></label>'+
+    '<label>Phase <input class="phase" type="range" min="-180" max="180" step="5" value="'+[0,60,-45][i]+'"><output></output></label>'+
+    '<label>Frequency <input class="freq" type="number" min="0.1" max="5" step="0.1" value="'+[0.5,0.8,1.2][i]+'"> Hz</label>';
+  fields.querySelector('legend').style.color=colour;
+  $('rows').append(fields);
+  return fields;
+});
+let t=0,last=null,paused=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function frequency(input){return Math.min(5,Math.max(.1,Number(input.value)||.1));}
+function angle(v,time){return tau*(v.f*time+v.phase/360);}
+function render(){
+  const shared=$('mode').value==='shared', count=+$('count').value;
+  $('shared').hidden=!shared;
+  const vectors=inputs.map((row,i)=>{
+    row.hidden=i>=count;
+    const amp=+row.querySelector('.amp').value, phase=+row.querySelector('.phase').value;
+    const freq=row.querySelector('.freq');
+    freq.parentElement.hidden=shared;
+    const [a,p]=row.querySelectorAll('output');
+    a.textContent=amp.toFixed(1)+' V'; p.textContent=phase+'°';
+    return {amp,phase,f:frequency(shared?$('common'):freq),colour:colours[i]};
+  }).slice(0,count);
+  $('time').textContent=t.toFixed(2)+' s';
+  $('play').textContent=paused?'Play':'Pause';
+  $('lesson').textContent=count===1
+    ? 'The arrow rotates anticlockwise. Its horizontal projection is v(t) = Vₘ cos(2πft + φ). The stationary phasor is Vₘ∠φ.'
+    : shared
+    ? 'At the same frequency, the vectors rotate together and their phase differences stay constant. The common rotation factor can be removed for phasor addition.'
+    : 'Change one frequency and watch the relative angle drift. Two vectors at different frequencies cannot be combined into a single fixed phasor.';
+  drawPlane(vectors); drawWave(vectors);
+}
+function surface(id){
+  const canvas=$(id), w=canvas.clientWidth, h=canvas.clientHeight;
+  const d=devicePixelRatio||1;
+  if(canvas.width!==Math.round(w*d)||canvas.height!==Math.round(h*d)){
+    canvas.width=Math.round(w*d);canvas.height=Math.round(h*d);
+  }
+  const c=canvas.getContext('2d');c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,w,h);
+  c.font='13px system-ui';c.fillStyle='#172033';return {c,w,h};
+}
+function line(c,x,y,a,b){c.beginPath();c.moveTo(x,y);c.lineTo(a,b);c.stroke();}
+function drawPlane(vectors){
+  const {c,w,h}=surface('plane'), x=w/2,y=h/2,r=Math.max(1,Math.min(w,h)/2-28);
+  c.strokeStyle='#d5dce6';
+  c.beginPath();c.arc(x,y,r,0,tau);c.stroke();
+  c.strokeStyle='#5b6472';line(c,12,y,w-14,y);line(c,x,14,x,h-14);
+  c.fillText('Re',w-22,y-7);c.fillText('Im',x+6,15);
+  if(vectors.length>=2 && vectors[0].amp>0 && vectors[1].amp>0){
+    const a=angle(vectors[0],t);
+    const difference=angle(vectors[1],t)-a;
+    const delta=Math.atan2(Math.sin(difference),Math.cos(difference));
+    const arcRadius=Math.min(38,r*.4);
+    c.strokeStyle='#5b6472';c.lineWidth=2;
+    c.beginPath();c.arc(x,y,arcRadius,-a,-a-delta,delta>0);c.stroke();
+    c.lineWidth=1;
+  }
+  vectors.forEach(v=>{
+    const a=angle(v,t), len=r*v.amp/5, px=x+len*Math.cos(a),py=y-len*Math.sin(a);
+    c.strokeStyle=c.fillStyle=v.colour;
+    c.setLineDash([4,4]);line(c,px,py,px,y);c.setLineDash([]);
+    c.lineWidth=3;line(c,x,y,px,py);c.lineWidth=1;
+    if(len>0){
+      c.beginPath();c.moveTo(px,py);
+      for(const k of [-.55,.55])c.lineTo(px-10*Math.cos(a+k),py+10*Math.sin(a+k));
+      c.closePath();c.fill();
+    }
+    c.beginPath();c.arc(px,y,4,0,tau);c.fill();
+  });
+  if(vectors.length>=2 && vectors[0].amp>0 && vectors[1].amp>0){
+    const difference=angle(vectors[1],t)-angle(vectors[0],t);
+    const degrees=Math.abs(Math.atan2(Math.sin(difference),Math.cos(difference)))*360/tau;
+    c.fillStyle='#172033';
+    c.fillText('Angle 1–2: '+degrees.toFixed(1)+'°',12,h-5);
+  }
+}
+function drawWave(vectors){
+  const {c,w,h}=surface('wave'), left=42,right=w-14,top=18,bottom=h-40,mid=(top+bottom)/2;
+  const duration=2/Math.min(...vectors.map(v=>v.f));
+  const start=Math.floor(t/duration)*duration;
+  const cursor=left+(right-left)*(t-start)/duration;
+  const y=v=>mid-v*(bottom-top)/10;
+  c.strokeStyle='#d5dce6';line(c,left,y(5),right,y(5));line(c,left,y(-5),right,y(-5));
+  c.strokeStyle='#5b6472';line(c,left,top,left,bottom);line(c,left,mid,right,mid);
+  for(const val of [-5,0,5])c.fillText(String(val),14,y(val)+4);
+  c.fillText('V',14,12);
+  c.fillText(start.toFixed(2)+' s',left,bottom+21);
+  const end=(start+duration).toFixed(2)+' s';c.fillText(end,right-c.measureText(end).width,bottom+21);
+  c.setLineDash([4,4]);line(c,cursor,top,cursor,bottom);c.setLineDash([]);
+  vectors.forEach(v=>{
+    c.strokeStyle=c.fillStyle=v.colour;c.lineWidth=2;c.beginPath();
+    const samples=Math.ceil(Math.max(240,32*v.f*duration));
+    for(let i=0;i<=samples;i++){
+      const q=i/samples, px=left+q*(right-left),py=y(v.amp*Math.cos(angle(v,start+q*duration)));
+      if(i===0)c.moveTo(px,py);else c.lineTo(px,py);
+    }
+    c.stroke();c.lineWidth=1;
+    c.beginPath();c.arc(cursor,y(v.amp*Math.cos(angle(v,t))),4,0,tau);c.fill();
+  });
+}
+$('play').onclick=()=>{paused=!paused;last=null;render();};
+$('reset').onclick=()=>{t=0;last=null;render();};
+document.querySelector('main').addEventListener('input',render);
+new ResizeObserver(render).observe($('wave'));
+function frame(now){
+  if(!paused){t+=last===null?0:Math.min(.05,(now-last)/1000);render();}
+  last=now;requestAnimationFrame(frame);
+}
+render();requestAnimationFrame(frame);
+</script>
+</main>
+</html>
